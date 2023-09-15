@@ -2,6 +2,10 @@
 #include "window.hpp"
 #include "pipeline.hpp"
 #include "device.hpp"
+#include "swapchain.hpp"
+
+#include <memory>
+#include <vector>
 
 class App
 {
@@ -18,8 +22,13 @@ private:
 	// Logical and Physical device
 	Devices devices{ vulkanWindow };
 	// Pipeline Layout
-
+	VkPipelineLayout pipelineLayout{};
 	// Pipeline creation
-	GraphicsPipeline graphicsPipeline{ "shaders/simple_shader.vert.spv", "shaders/simple_shader.frag.spv" };
+	GraphicsPipeline graphicsPipeline{
+		devices,
+		"shaders/simple_shader.vert.spv",
+		"shaders/simple_shader.frag.spv",
+		GraphicsPipeline::defaultPipelineConfigInfo(WIDTH, HEIGHT)
+	};
 };
 

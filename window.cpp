@@ -1,4 +1,5 @@
 #include "window.hpp"
+#include <stdexcept>
 
 VulkanWindow::VulkanWindow(int w, int h, std::string n) : width(w), height(h), wName(n)
 {

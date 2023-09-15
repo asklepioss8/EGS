@@ -1,6 +1,8 @@
 #include "pipeline.hpp"
 #include <fstream>
 #include <iostream>
+#include <cassert>
+#include <stdexcept>
 
 GraphicsPipeline::GraphicsPipeline(Devices& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo) : devices{device}
 {
