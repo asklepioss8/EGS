@@ -22,7 +22,7 @@ struct QueueFamilyIndices
 	}
 };
 
-class Devices
+class EGSDevice
 {
 public:
 #ifdef NDEBUG
@@ -32,18 +32,18 @@ public:
 #endif // NDEBUG MACRO
 
 	// Class Constructor and destructor
-	Devices(VulkanWindow& window);
-	~Devices();
+	EGSDevice(EGSWindow& window);
+	~EGSDevice();
 
 	// Physcial device properties as Public function
 	VkPhysicalDeviceProperties properties;
 
 
 	// Make Class immutable and non-copyable
-	Devices(const Devices&) = delete;
-	void operator=(const Devices&) = delete;
-	Devices(Devices&&) = delete;
-	Devices& operator=(Devices&&) = delete;
+	EGSDevice(const EGSDevice&) = delete;
+	void operator=(const EGSDevice&) = delete;
+	EGSDevice(EGSDevice&&) = delete;
+	EGSDevice& operator=(EGSDevice&&) = delete;
 
 	// Getter Functions for private variables
 	VkCommandPool getCommandPool() { return commandPool; }
@@ -91,7 +91,7 @@ private:
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VulkanWindow& window;
+	EGSWindow& window;
 	VkCommandPool commandPool;
 
 	VkDevice device_;

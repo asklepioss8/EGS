@@ -5,14 +5,14 @@
 
 
 
-class VulkanWindow
+class EGSWindow
 {
 public:
-	VulkanWindow(int w, int h, std::string n);
-	~VulkanWindow();
+	EGSWindow(int w, int h, std::string n);
+	~EGSWindow();
 
-	VulkanWindow(const VulkanWindow&) = delete;
-	VulkanWindow& operator=(const VulkanWindow&) = delete;
+	EGSWindow(const EGSWindow&) = delete;
+	EGSWindow& operator=(const EGSWindow&) = delete;
 
 	bool shouldClose() { return glfwWindowShouldClose(window); }
 	VkExtent2D getExtent() { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }

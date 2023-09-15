@@ -11,7 +11,7 @@ class EGSSwapChain
 public:
 	static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-	EGSSwapChain(Devices& deviceRef, VkExtent2D window);
+	EGSSwapChain(EGSDevice& deviceRef, VkExtent2D window);
 	~EGSSwapChain();
 
 	EGSSwapChain(const EGSSwapChain&) = delete;
@@ -51,7 +51,7 @@ private:
 	std::vector<VkImage> swapChainImages;
 	std::vector<VkImageView> swapChainImageViews;
 
-	Devices& device;
+	EGSDevice& device;
 	VkExtent2D windowExtent;
 
 	VkSwapchainKHR swapChain;

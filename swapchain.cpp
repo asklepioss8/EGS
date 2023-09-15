@@ -8,7 +8,7 @@
 #include <limits>
 #include <set>
 
-EGSSwapChain::EGSSwapChain(Devices& deviceRef, VkExtent2D extent): device{device}, windowExtent{extent}
+EGSSwapChain::EGSSwapChain(EGSDevice& deviceRef, VkExtent2D extent) : device{ device }, windowExtent{ extent }
 {
 	// Pipeline
 	createSwapChain();
@@ -56,6 +56,13 @@ EGSSwapChain::~EGSSwapChain()
 	}
 }
 
+VkFormat EGSSwapChain::findDepthFormat()
+{
+	return device.findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
 VkResult EGSSwapChain::acquireNextImage(uint32_t* imageIndex)
 {
 	// THERE MIGHT BE AN ERROR ABOUT max()
@@ -99,7 +106,7 @@ VkResult EGSSwapChain::submitCommandBuffers(const VkCommandBuffer* buffers, uint
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
-	
+
 	VkSwapchainKHR swapChains[] = { swapChain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
@@ -157,7 +164,7 @@ void EGSSwapChain::createSwapChain()
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
-	
+
 	// One of the important aspects of != VK_SUCCES there is more than 2 possible vk results so we cant retype as == VK_INCOMPLETE
 	if (vkCreateSwapchainKHR(device.getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS)
 	{
@@ -191,6 +198,53 @@ void EGSSwapChain::createImageViews()
 		if (vkCreateImageView(device.getDevice(), &viewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create texture image view");
+		}
+	}
+}
+
+void EGSSwapChain::createDepthResources()
+{
+	VkFormat depthFormat = findDepthFormat();
+	VkExtent2D swapChainExtent = getSwapChainExtent();
+
+	depthImages.resize(imageCount());
+	depthImageMemories.resize(imageCount());
+	depthImageViews.resize(imageCount());
+
+	for (int i = 0; i < depthImages.size(); ++i)
+	{
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = swapChainExtent.width;
+		imageInfo.extent.height = swapChainExtent.height;
+		imageInfo.extent.depth = 1;
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.format = depthFormat;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.flags = 0;
+
+		device.createImageWithInfo(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImages[i], depthImageMemories[i]);
+
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = depthImages[i];
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = depthFormat;
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		viewInfo.subresourceRange.baseMipLevel = 0;
+		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount = 1;
+
+		if (vkCreateImageView(device.getDevice(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create texture image view!");
 		}
 	}
 }
@@ -257,6 +311,104 @@ void EGSSwapChain::createRenderPass()
 
 void EGSSwapChain::createFramebuffers()
 {
-	swapChainFramebuffers.resize()
+	swapChainFramebuffers.resize(imageCount());
+	for (size_t i = 0; imageCount(); ++i)
+	{
+		std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageViews[i] };
+		VkExtent2D swapChainExtent = getSwapChainExtent();
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = swapChainExtent.width;
+		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.layers = 1;
 
+		if (vkCreateFramebuffer(device.getDevice(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create framebuffer");
+		}
+	}
+}
+
+void EGSSwapChain::createSyncObjects()
+{
+	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	inFlightFence.resize(MAX_FRAMES_IN_FLIGHT);
+	imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
+
+	VkSemaphoreCreateInfo semaphoreInfo = {};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		if (vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+			vkCreateFence(device.getDevice(), &fenceInfo, nullptr, &inFlightFence[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create synchronization objects for a frame");
+		}
+	}
+}
+
+VkSurfaceFormatKHR EGSSwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+{
+	for (const auto& availableFormat : availableFormats)
+	{
+		if ((availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM) && (availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR))
+		{
+			return availableFormat;
+		}
+	}
+
+	return availableFormats[0];
+}
+
+VkPresentModeKHR EGSSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+{
+	for (const auto& availablePresentMode : availablePresentModes)
+	{
+		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+		{
+			std::cout << "Present mode: Mailbox" << std::endl;
+			return availablePresentMode;
+		}
+	}
+	for (const auto& availablePresentMode : availablePresentModes)
+	{
+		if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+		{
+			std::cout << "Present mode: Immediate" << std::endl;
+			return availablePresentMode;
+		}
+	}
+	// Do you want to minimize latency? Use mailbox.
+	// Do you want to minimize stuttering ? Use relaxed FIFO.
+	// Do you want to minimize power consumption ? Fall back to regular FIFO.
+	// Or make it user defined
+
+	std::cout << "Present mode: V-Sync" << std::endl;
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D EGSSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+{
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+	{
+		return capabilities.currentExtent;
+	}
+	else
+	{
+		// ?!
+		VkExtent2D actualExtent = windowExtent;
+		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+		return actualExtent;
+	}
 }

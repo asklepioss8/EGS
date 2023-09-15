@@ -6,6 +6,11 @@
 
 struct PipelineConfigInfo
 {
+	PipelineConfigInfo() = default;
+	PipelineConfigInfo(const PipelineConfigInfo&) = delete;
+	// May void operator overload
+	PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
+
 	VkViewport viewport{};
 	VkRect2D scissor{};
 	
@@ -23,23 +28,23 @@ struct PipelineConfigInfo
 };
 
 
-class GraphicsPipeline
+class EGSGraphicsPipeline
 {
 public:
 
-	GraphicsPipeline(Devices& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo);
-	~GraphicsPipeline();
+	EGSGraphicsPipeline(EGSDevice& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo);
+	~EGSGraphicsPipeline();
 
 	// Non construction-copyable
-	GraphicsPipeline(const GraphicsPipeline&) = delete;
-	// non copyable (GraphicsPipeline& -> void maybe)
-	GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
+	EGSGraphicsPipeline(const EGSGraphicsPipeline&) = delete;
+	// non copyable (EGSGraphicsPipeline& -> void maybe)
+	EGSGraphicsPipeline& operator=(const EGSGraphicsPipeline&) = delete;
 
-	static PipelineConfigInfo defaultPipelineConfigInfo(uint32_t width, uint32_t heigth);
+	static void defaultPipelineConfigInfo(PipelineConfigInfo &configInfo, uint32_t width, uint32_t heigth);
 
 private:
-	Devices& devices;
-	VkPipeline graphicsPipeline;
+	EGSDevice& egsDevice;
+	VkPipeline egsGraphicsPipeline;
 	VkShaderModule vertShaderModule;
 	VkShaderModule fragShaderModule;
 

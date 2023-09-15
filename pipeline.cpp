@@ -4,22 +4,20 @@
 #include <cassert>
 #include <stdexcept>
 
-GraphicsPipeline::GraphicsPipeline(Devices& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo) : devices{device}
+EGSGraphicsPipeline::EGSGraphicsPipeline(EGSDevice& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo) : egsDevice{device}
 {
 	createGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
 }
 
-GraphicsPipeline::~GraphicsPipeline()
+EGSGraphicsPipeline::~EGSGraphicsPipeline()
 {
-	//vkDestroyShaderModule(devices.getDevice(), fragShaderModule, nullptr);
-	//vkDestroyShaderModule(devices.getDevice(), vertShaderModule, nullptr);
-	vkDestroyPipeline(devices.getDevice(), graphicsPipeline, nullptr);
+	//vkDestroyShaderModule(egsDevice.getDevice(), fragShaderModule, nullptr);
+	//vkDestroyShaderModule(egsDevice.getDevice(), vertShaderModule, nullptr);
+	vkDestroyPipeline(egsDevice.getDevice(), egsGraphicsPipeline, nullptr);
 }
 
-PipelineConfigInfo GraphicsPipeline::defaultPipelineConfigInfo(uint32_t width, uint32_t heigth)
+void EGSGraphicsPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, uint32_t width, uint32_t heigth)
 {
-	PipelineConfigInfo configInfo{};
-
 	// 1- Input Assembly
 	configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -98,11 +96,9 @@ PipelineConfigInfo GraphicsPipeline::defaultPipelineConfigInfo(uint32_t width, u
 	configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
 	configInfo.depthStencilInfo.front = {};  // Optional
 	configInfo.depthStencilInfo.back = {};   // Optional
-
-	return configInfo;
 }
 
-std::vector<char> GraphicsPipeline::readFile(const std::string filePath)
+std::vector<char> EGSGraphicsPipeline::readFile(const std::string filePath)
 {
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -120,7 +116,7 @@ std::vector<char> GraphicsPipeline::readFile(const std::string filePath)
 	return buffer;
 }
 
-void GraphicsPipeline::createGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo)
+void EGSGraphicsPipeline::createGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo)
 {
 	assert(configInfo.pipelineLayout != nullptr && "Cannot create graphics pipeline: no pipelineLayout provided in config info");
 	assert(configInfo.renderPass != nullptr && "Cannot create graphics pipeline : no renderPass provided in config info");
@@ -177,25 +173,25 @@ void GraphicsPipeline::createGraphicsPipeline(const std::string& vertFilePath, c
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 
-	if (vkCreateGraphicsPipelines(devices.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
+	if (vkCreateGraphicsPipelines(egsDevice.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &egsGraphicsPipeline) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to create graphics pipeline!");
 	}
 
-	vkDestroyShaderModule(devices.getDevice(), fragShaderModule, nullptr);
-	vkDestroyShaderModule(devices.getDevice(), vertShaderModule, nullptr);
+	vkDestroyShaderModule(egsDevice.getDevice(), fragShaderModule, nullptr);
+	vkDestroyShaderModule(egsDevice.getDevice(), vertShaderModule, nullptr);
 	fragShaderModule = VK_NULL_HANDLE;
 	vertShaderModule = VK_NULL_HANDLE;
 }
 
-void GraphicsPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule)
+void EGSGraphicsPipeline::createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule)
 {
 	VkShaderModuleCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	createInfo.codeSize = code.size();
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-	if (vkCreateShaderModule(devices.getDevice(), &createInfo, nullptr, shaderModule) != VK_SUCCESS)
+	if (vkCreateShaderModule(egsDevice.getDevice(), &createInfo, nullptr, shaderModule) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create shader module");
 	}

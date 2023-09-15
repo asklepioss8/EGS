@@ -1,18 +1,18 @@
 #include "window.hpp"
 #include <stdexcept>
 
-VulkanWindow::VulkanWindow(int w, int h, std::string n) : width(w), height(h), wName(n)
+EGSWindow::EGSWindow(int w, int h, std::string n) : width(w), height(h), wName(n)
 {
 	initWindow();
 }
 
-VulkanWindow::~VulkanWindow()
+EGSWindow::~EGSWindow()
 {
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
 
-void VulkanWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface)
+void EGSWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface)
 {
 	if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS)
 	{
@@ -20,7 +20,7 @@ void VulkanWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR* surfac
 	}
 }
 
-void VulkanWindow::initWindow()
+void EGSWindow::initWindow()
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

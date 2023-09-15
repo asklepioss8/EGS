@@ -14,21 +14,35 @@ public:
 	static constexpr int WIDTH = 800;
 	static constexpr int HEIGHT = 600;
 	const char* wName = { "Vulkan Window" };
+
+	App();
+	~App();
+
 	void run();
 
+	App(const App&) = delete;
+	App& operator=(const App&) = delete;
+
 private:
+	// ######## SOME IMPORTANT VARIABLES############
 	// Window creation
-	VulkanWindow vulkanWindow{ WIDTH, HEIGHT, wName };
+	EGSWindow egsWindow{ WIDTH, HEIGHT, wName };
 	// Logical and Physical device
-	Devices devices{ vulkanWindow };
+	EGSDevice egsDevice{ egsWindow };
+	// Swapchain
+	EGSSwapChain egsSwapChain{ egsDevice, egsWindow.getExtent()};
+	// Pipeline creation
+	std::unique_ptr<EGSGraphicsPipeline> egsGraphicsPipeline;
 	// Pipeline Layout
 	VkPipelineLayout pipelineLayout{};
-	// Pipeline creation
-	GraphicsPipeline graphicsPipeline{
-		devices,
-		"shaders/simple_shader.vert.spv",
-		"shaders/simple_shader.frag.spv",
-		GraphicsPipeline::defaultPipelineConfigInfo(WIDTH, HEIGHT)
-	};
+	// Command buffer
+	std::vector<VkCommandBuffer> commandBuffers;
+	// ###########################################
+
+	void createPipelineLayout();
+	void createPipeline();
+	void createCommandBuffers();
+	void drawFrame();
+
 };
 
